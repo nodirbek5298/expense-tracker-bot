@@ -8,9 +8,11 @@ from aiogram.filters import Command
 from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup, WebAppInfo
 
 import db
+import extras
 from utils import MAX_AMOUNT, encode_payload, fmt_money
 
 router = Router()
+router.include_router(extras.router)
 
 MONTHS = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul",
           "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"]
