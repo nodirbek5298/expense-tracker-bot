@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Xarajatlar</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#07130e;--card:#0e2219;--line:#1a3a2b;--g:#22c55e;--g2:#4ade80;--tx:#e8f5ec;--mut:#7fa38d}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+body{font:16px/1.4 system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;padding:16px 16px 40px}
+h1{font-size:22px}.muted{color:var(--mut);font-size:14px}
+header{margin-bottom:16px}
+.tabs{display:flex;gap:6px;background:var(--card);padding:4px;border-radius:14px;margin-bottom:16px}
+.tab{flex:1;border:0;border-radius:11px;padding:10px;background:none;color:var(--mut);font:inherit;font-weight:600}
+.tab.on{background:var(--g);color:#032010}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+label{display:block;color:var(--mut);font-size:13px;margin-bottom:6px}
+.amt{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid var(--line);padding-bottom:6px}
+.amt:focus-within{border-color:var(--g)}
+#amount{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--tx);font-size:34px;font-weight:700}
+.amt span{color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--tx);border-radius:999px;padding:8px 14px;font:inherit;font-size:15px}
+.chip.on{background:var(--g);border-color:var(--g);color:#032010;font-weight:600}
+#custom{width:100%;margin-top:12px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--tx);font:inherit;outline:0}
+#custom:focus{border-color:var(--g)}
+.go{width:100%;border:0;border-radius:14px;padding:15px;background:linear-gradient(135deg,var(--g),var(--g2));color:#032010;font:inherit;font-size:17px;font-weight:700}
+#note{margin-top:10px;text-align:center;color:var(--g2);font-size:14px;min-height:20px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.kpi b{display:block;font-size:20px;margin-top:4px;color:var(--g2)}
+.donut{display:block;width:210px;height:210px;margin:6px auto 14px}
+.donut text{fill:var(--tx);text-anchor:middle}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.dot{width:12px;height:12px;border-radius:50%}
+.nm{flex:1;text-transform:capitalize}.pc{color:var(--mut);font-size:14px}
+</style>
+</head>
+<body>
+<header><h1>💸 Xarajatlar</h1><div class="muted">Talabalar va oilalar uchun hisob-kitob</div></header>
+<div class="tabs">
+  <button class="tab on" data-v="add">➕ Qo'shish</button>
+  <button class="tab" data-v="stats">📊 Statistika</button>
+</div>
+
+<section id="v-add">
+  <div class="card">
+    <label for="amount">Summa</label>
+    <div class="amt"><input id="amount" inputmode="numeric" placeholder="0" autocomplete="off"><span>so'm</span></div>
+  </div>
+  <div class="card">
+    <label>Kategoriya</label>
+    <div id="chips" class="chips"></div>
+    <input id="custom" maxlength="50" placeholder="Yoki o'zingiz yozing...">
+  </div>
+  <button id="add" class="go">Qo'shish</button>
+  <div id="note"></div>
+</section>
+
+<section id="v-stats" hidden>
+  <div class="kpis">
+    <div class="kpi"><span class="muted">Bugun</span><b id="today">0</b></div>
+    <div class="kpi"><span class="muted" id="month">Shu oy</span><b id="total">0</b></div>
+  </div>
+  <div class="card">
+    <svg class="donut" viewBox="0 0 42 42">
+      <circle r="15.9155" cx="21" cy="21" fill="none" stroke="#12301f" stroke-width="5"/>
+      <g id="donut"></g>
+      <text id="ctr" x="21" y="21.5" font-size="4.4" font-weight="700"></text>
+      <text x="21" y="26.5" font-size="2.6" style="fill:#7fa38d">so'm</text>
+    </svg>
+    <div id="list"></div>
+  </div>
+  <p class="muted" style="text-align:center">Yangilash uchun botga /app yozing</p>
+</section>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor('#07130e'); tg.setBackgroundColor('#07130e'); } catch (e) {} }
+const $ = s => document.querySelector(s);
+const fmt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COLORS = ['#22c55e','#4ade80','#16a34a','#86efac','#15803d','#34d399','#bbf7d0','#14532d'];
+const CATS = [['🍽','ovqat'],['🚕','transport'],['👕','kiyim'],['📚',"o'qish"],['🏠','kommunal'],['💊','salomatlik'],['🎮',"ko'ngilochar"],['📦','boshqa']];
+let sel = 'ovqat';
+
+function readStats() {
+  try {
+    const p = new URLSearchParams(location.search).get('s');
+    if (!p) return null;
+    const b = p.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b + '='.repeat((4 - b.length % 4) % 4));
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
+  } catch (e) { return null; }
+}
+
+function renderChips() {
+  $('#chips').innerHTML = CATS.map(([i, n]) =>
+    `<button class="chip${n === sel ? ' on' : ''}" data-n="${esc(n)}">${i} ${esc(n)}</button>`).join('');
+}
+
+function renderStats() {
+  const s = readStats();
+  const rows = s && s.m ? s.m : [];
+  const sum = rows.reduce((a, r) => a + r[1], 0);
+  if (s && s.mn) $('#month').textContent = s.mn;
+  $('#today').textContent = s ? fmt(s.t || 0) : '0';
+  $('#total').textContent = s ? fmt(s.n || 0) : '0';
+  $('#ctr').textContent = fmt(sum);
+  if (!sum) { $('#donut').innerHTML = ''; $('#list').innerHTML = '<p class="muted">Bu oy hali xarajat yo\'q.</p>'; return; }
+  let off = 0;
+  $('#donut').innerHTML = rows.map(([n, v], i) => {
+    const p = v / sum * 100;
+    const c = `<circle r="15.9155" cx="21" cy="21" fill="none" stroke="${COLORS[i % COLORS.length]}" stroke-width="5" stroke-dasharray="${p} ${100 - p}" stroke-dashoffset="${25 - off}"/>`;
+    off += p;
+    return c;
+  }).join('');
+  $('#list').innerHTML = rows.map(([n, v], i) =>
+    `<div class="row"><span class="dot" style="background:${COLORS[i % COLORS.length]}"></span><span class="nm">${esc(n)}</span><span class="pc">${Math.round(v / sum * 100)}%</span><b>${fmt(v)}</b></div>`).join('');
+}
+
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  sel = b.dataset.n; $('#custom').value = ''; renderChips();
+});
+$('#amount').addEventListener('input', e => {
+  const d = e.target.value.replace(/\D/g, '').slice(0, 12);
+  e.target.value = d ? fmt(+d) : '';
+});
+$('#add').addEventListener('click', () => {
+  const amount = parseInt($('#amount').value.replace(/\D/g, ''), 10);
+  if (!amount) { $('#amount').focus(); return; }
+  const category = ($('#custom').value.trim() || sel).slice(0, 50);
+  if (tg && tg.sendData && tg.platform && tg.platform !== 'unknown') {
+    tg.sendData(JSON.stringify({ amount, category }));
+  } else {
+    $('#note').textContent = 'Saqlash uchun ilovani Telegram ichida oching.';
+  }
+});
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  $('#v-add').hidden = t.dataset.v !== 'add';
+  $('#v-stats').hidden = t.dataset.v !== 'stats';
+}));
+
+renderChips();
+renderStats();
+</script>
+</body>
+</html>

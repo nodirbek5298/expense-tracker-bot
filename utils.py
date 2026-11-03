@@ -1,6 +1,10 @@
 """Yordamchi funksiyalar: xabarni tahlil qilish va pulni chiroyli ko'rsatish."""
+import base64
+import json
 import re
 from typing import Optional, Tuple
+
+MAX_AMOUNT = 10**12
 
 # 25000 | 25 000 | 15k | 15 ming  (so'ng ixtiyoriy izoh)
 _AMOUNT_RE = re.compile(
@@ -27,7 +31,7 @@ def parse_expense(text: str) -> Optional[Tuple[int, str]]:
     amount = int(match.group(1).replace(" ", ""))
     if match.group(2):
         amount *= 1000
-    if amount <= 0:
+    if amount <= 0 or amount > MAX_AMOUNT:
         return None
 
     rest = (text[: match.start()] + " " + text[match.end():]).strip()
@@ -38,3 +42,9 @@ def parse_expense(text: str) -> Optional[Tuple[int, str]]:
 def fmt_money(amount: int) -> str:
     """25000 -> '25 000 so'm'"""
     return f"{amount:,}".replace(",", " ") + " so'm"
+
+
+def encode_payload(data: dict) -> str:
+    """Mini App'ga URL orqali uzatish uchun JSON -> base64url (UTF-8)."""
+    raw = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")

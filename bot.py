@@ -12,6 +12,7 @@ from aiogram.types import Message
 from dotenv import load_dotenv
 
 import db
+import webapp
 from utils import fmt_money, parse_expense
 
 load_dotenv()
@@ -30,6 +31,7 @@ HELP_TEXT = (
     "/month - shu oy\n"
     "/last - oxirgi 10 ta yozuv\n"
     "/delete 12 - 12-raqamli yozuvni o'chirish\n"
+    "/app - Mini App (ilova)\n"
     "/reset - barcha ma'lumotlarimni o'chirish\n"
     "/help - yordam"
 )
@@ -57,7 +59,7 @@ def build_summary(user_id: int, period: str) -> str:
 @router.message(CommandStart())
 @router.message(Command("help"))
 async def cmd_start(message: Message) -> None:
-    await message.answer(HELP_TEXT)
+    await message.answer(HELP_TEXT, reply_markup=webapp.keyboard(message.from_user.id))
 
 
 @router.message(Command("today"))
@@ -123,7 +125,8 @@ async def add_expense(message: Message) -> None:
     amount, category = parsed
     expense_id = db.add_expense(message.from_user.id, amount, category)
     await message.answer(
-        f"✅ Qo'shildi: {fmt_money(amount)} - {category} (#{expense_id})"
+        f"✅ Qo'shildi: {fmt_money(amount)} - {category} (#{expense_id})",
+        reply_markup=webapp.keyboard(message.from_user.id),
     )
 
 
@@ -135,6 +138,7 @@ async def main() -> None:
     db.init_db()
     bot = Bot(token=token)
     dp = Dispatcher()
+    dp.include_router(webapp.router)
     dp.include_router(router)
     await dp.start_polling(bot)
 
