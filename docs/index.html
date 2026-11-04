@@ -20,7 +20,10 @@ h1{font-size:22px}.muted{color:var(--mut);font-size:14px}
 .tabs,.seg{display:flex;gap:6px;background:var(--card);padding:4px;border-radius:14px;margin-bottom:14px}
 button{font:inherit;cursor:pointer;transition:transform .1s,background .2s}
 button:active{transform:scale(.96)}
-.tab,.sg{flex:1;border:0;border-radius:11px;padding:10px 4px;background:none;color:var(--mut);font-weight:600;font-size:15px}
+.tab,.sg{flex:1;border:0;border-radius:11px;background:none;color:var(--mut);font-weight:600}
+.sg{padding:10px 4px;font-size:15px}
+.tab{padding:7px 2px;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.tab span{font-size:18px}
 .tab.on,.sg.on{background:var(--g);color:#032010}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
 label{display:block;color:var(--mut);font-size:13px;margin-bottom:8px}
@@ -40,8 +43,9 @@ input.t:focus{border-color:var(--g)}
 .kpi b{display:block;font-size:19px;margin-top:4px;color:var(--g2)}
 .bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden}
 .bar i{display:block;height:100%;width:0;border-radius:6px;transition:width .8s ease,background .3s}
-.lim{display:flex;gap:8px}.lim input{margin-top:12px;flex:1}
-.mini{margin-top:12px;border:0;border-radius:12px;padding:0 16px;background:var(--g);color:#032010;font-weight:700}
+.lim{display:flex;gap:8px}.lim input{margin-top:12px;flex:1;min-width:0}
+.mini{margin-top:12px;border:0;border-radius:12px;padding:10px 16px;background:var(--g);color:#032010;font-weight:700}
+.mini.off{background:var(--line);color:var(--tx)}
 .donut{display:block;width:200px;height:200px;margin:4px auto 12px}
 .donut text{fill:var(--tx);text-anchor:middle}
 .row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
@@ -62,9 +66,10 @@ b.income{color:#ca8a04}.x{border:0;background:none;color:var(--mut);font-size:16
 <body>
 <header><div><h1>💸 Xarajatlar</h1><div class="muted">Talabalar va oilalar uchun</div></div><button id="theme" class="ic">☀️</button></header>
 <div class="tabs">
-  <button class="tab on" data-v="add">➕ Qo'shish</button>
-  <button class="tab" data-v="stats">📊 Statistika</button>
-  <button class="tab" data-v="hist">🧾 Tarix</button>
+  <button class="tab on" data-v="add"><span>➕</span>Qo'shish</button>
+  <button class="tab" data-v="stats"><span>📊</span>Statistika</button>
+  <button class="tab" data-v="hist"><span>🧾</span>Tarix</button>
+  <button class="tab" data-v="more"><span>⚙️</span>Ko'proq</button>
 </div>
 
 <section id="v-add">
@@ -109,6 +114,27 @@ b.income{color:#ca8a04}.x{border:0;background:none;color:var(--mut);font-size:16
 <section id="v-hist" hidden>
   <div class="card"><div id="hist"></div></div>
   <p class="muted" style="text-align:center">Oxirgi 8 ta yozuv. Yangilash uchun botga /app yozing.</p>
+</section>
+
+<section id="v-more" hidden>
+  <div class="card"><label>📅 Oylik hisobot</label><div id="rep"></div></div>
+  <div class="card">
+    <label>📤 Excel (CSV) yuklab olish</label>
+    <div class="lim"><button class="mini" data-ex="1" style="flex:1">Shu oy</button><button class="mini" data-ex="0" style="flex:1">Hammasi</button></div>
+    <div class="muted" style="margin-top:8px">Fayl bot chatiga yuboriladi.</div>
+  </div>
+  <div class="card">
+    <label>⏰ Kunlik eslatma</label>
+    <div class="lim"><input id="rt" class="t" type="time"><button id="rsave" class="mini">Saqlash</button><button id="roff" class="mini off">O'chirish</button></div>
+    <div class="muted" id="rst" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <label>🔁 Doimiy xarajatlar (har oy avtomatik)</label>
+    <div id="rec"></div>
+    <input id="ra" class="t" inputmode="numeric" placeholder="Summa">
+    <input id="rc" class="t" maxlength="50" placeholder="Kategoriya (ijara, internet...)">
+    <div class="lim"><input id="rd" class="t" inputmode="numeric" placeholder="Oyning kuni (1-28)"><button id="radd" class="mini">Qo'shish</button></div>
+  </div>
 </section>
 <div id="toast"></div>
 
@@ -198,6 +224,19 @@ function renderHist(h) {
     : '<p class="muted">Hali yozuv yo\'q.</p>';
 }
 
+function renderMore(s) {
+  const n = s.n || 0, i = s.i || 0, p = s.p || 0, bal = i - n;
+  const L = [['Kirim', fmt(i)], ['Xarajat', fmt(n)], ['Balans', (bal < 0 ? '−' : '') + fmt(Math.abs(bal))], ["Kuniga o'rtacha", fmt(n / new Date().getDate())]];
+  if (p) L.push(["O'tgan oyga nisbatan", (n >= p ? '+' : '−') + Math.round(Math.abs(n - p) / p * 100) + '%']);
+  $('#rep').innerHTML = L.map(([a, b]) => `<div class="row"><span class="nm">${a}</span><b>${b}</b></div>`).join('');
+  $('#rt').value = s.r || '';
+  $('#rst').textContent = s.r ? `Har kuni ${s.r} da (o'sha kuni yozuv bo'lmasa)` : "Eslatma o'chiq";
+  const c = s.c || [];
+  $('#rec').innerHTML = c.length ? c.map(([id, a, k, d]) =>
+    `<div class="row"><span class="nm">${esc(k)}<small>har oyning ${d}-kuni</small></span><b>${fmt(a)}</b><button class="x" data-rid="${id}">✕</button></div>`).join('')
+    : '<p class="muted">Doimiy xarajat yo\'q.</p>';
+}
+
 $('#chips').addEventListener('click', e => {
   const b = e.target.closest('.chip'); if (!b) return;
   sel = b.dataset.n; $('#custom').value = ''; renderChips();
@@ -206,7 +245,7 @@ $$('.sg').forEach(b => b.addEventListener('click', () => {
   kind = b.dataset.k; sel = CATS[kind][0][1];
   $$('.sg').forEach(x => x.classList.toggle('on', x === b)); renderChips();
 }));
-['#amount', '#limit'].forEach(id => $(id).addEventListener('input', e => {
+['#amount', '#limit', '#ra'].forEach(id => $(id).addEventListener('input', e => {
   const d = e.target.value.replace(/\D/g, '').slice(0, 12);
   e.target.value = d ? fmt(+d) : '';
 }));
@@ -220,9 +259,22 @@ $('#hist').addEventListener('click', e => {
   const b = e.target.closest('.x'); if (!b) return;
   ask("Yozuv o'chirilsinmi?", () => send({ a: 'del', id: +b.dataset.id }));
 });
+$('#v-more').addEventListener('click', e => {
+  const ex = e.target.closest('[data-ex]');
+  if (ex) return send({ a: 'export', m: +ex.dataset.ex });
+  const x = e.target.closest('[data-rid]');
+  if (x) return ask("Doimiy xarajat o'chirilsinmi?", () => send({ a: 'rec_del', id: +x.dataset.rid }));
+  if (e.target.id === 'rsave') { const t = $('#rt').value; return t ? send({ a: 'remind', t }) : toast('Vaqtni tanlang.'); }
+  if (e.target.id === 'roff') return send({ a: 'remind', t: '' });
+  if (e.target.id === 'radd') {
+    const amount = digits($('#ra').value), day = digits($('#rd').value);
+    if (!amount || day < 1 || day > 28) return toast('Summa va kun (1-28) kiriting.');
+    send({ a: 'rec_add', amount, category: $('#rc').value.trim() || 'boshqa', day });
+  }
+});
 $$('.tab').forEach(t => t.addEventListener('click', () => {
   $$('.tab').forEach(x => x.classList.toggle('on', x === t));
-  ['add', 'stats', 'hist'].forEach(v => $('#v-' + v).hidden = v !== t.dataset.v);
+  ['add', 'stats', 'hist', 'more'].forEach(v => $('#v-' + v).hidden = v !== t.dataset.v);
 }));
 $('#theme').addEventListener('click', () => applyTheme(!document.documentElement.classList.contains('light')));
 
@@ -230,7 +282,7 @@ if (tg) { tg.ready(); tg.expand(); }
 let light = false; try { light = localStorage.getItem('theme') === 'l'; } catch (e) {}
 applyTheme(light);
 const S = readStats();
-renderChips(); renderStats(S); renderHist(S.h || []);
+renderChips(); renderStats(S); renderHist(S.h || []); renderMore(S);
 </script>
 </body>
 </html>
