@@ -11,7 +11,9 @@ from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
 
+import admin
 import db
+import tracking
 import webapp
 from utils import fmt_money, parse_expense
 
@@ -136,8 +138,11 @@ async def main() -> None:
     if not token:
         raise SystemExit("BOT_TOKEN topilmadi. .env faylini tekshiring (README'ga qarang).")
     db.init_db()
+    tracking.init()
     bot = Bot(token=token)
     dp = Dispatcher()
+    dp.message.outer_middleware(admin.TrackingMiddleware())
+    dp.include_router(admin.router)
     dp.include_router(webapp.router)
     dp.include_router(router)
     await dp.start_polling(bot)
